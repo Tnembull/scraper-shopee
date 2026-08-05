@@ -36,6 +36,18 @@ class ShopeeBrowserManager:
     def _init_driver(self, headless=False):
         chrome_binary = "/usr/bin/google-chrome"
         
+        # 1. First try connecting to existing Chrome on remote-debugging-port=9222 (100% bypass anti-bot)
+        if HAS_SELENIUM and webdriver:
+            try:
+                options = Options()
+                options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+                self.driver = webdriver.Chrome(options=options)
+                print("[Info] Berhasil terhubung ke Chrome yang sedang berjalan di port 9222!")
+                return
+            except Exception:
+                pass
+
+        # 2. Fallback to Undetected ChromeDriver
         if HAS_UC and uc:
             try:
                 options = uc.ChromeOptions()
@@ -76,6 +88,7 @@ class ShopeeBrowserManager:
                 self._apply_stealth_scripts()
             except Exception as e:
                 print(f"[Warning] Failed to start standard Chrome driver: {e}")
+
 
 
     def _apply_stealth_scripts(self):
