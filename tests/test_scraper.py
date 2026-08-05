@@ -61,6 +61,17 @@ class TestScraper(unittest.TestCase):
         self.assertEqual(len(reviews), 1)
         self.assertEqual(reviews[0]["comment"], "Target Range")
 
+    def test_parse_product_url(self):
+        scraper = ShopeeScraper(browser_manager=None)
+        res1 = scraper.parse_product_url("https://shopee.co.id/Kopi-Robusta-Lampung-i.12345.67890")
+        self.assertEqual(res1["shop_id"], "12345")
+        self.assertEqual(res1["item_id"], "67890")
+        
+        res2 = scraper.parse_product_url("https://shopee.co.id/product/999/888")
+        self.assertEqual(res2["shop_id"], "999")
+        self.assertEqual(res2["item_id"], "888")
+
 if __name__ == "__main__":
     unittest.main()
+
 
