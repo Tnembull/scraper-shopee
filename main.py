@@ -1,0 +1,156 @@
+import os
+import sys
+import datetime
+
+try:
+    from rich.console import Console
+    from rich.table import Table
+    from rich.prompt import Prompt
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+    HAS_RICH = True
+    console = Console()
+except ImportError:
+    HAS_RICH = False
+
+from src.browser import ShopeeBrowserManager
+from src.scraper import ShopeeScraper
+from src.exporter import export_reviews
+
+
+def print_msg(msg: str, style: str = "info"):
+    if HAS_RICH:
+        color_map = {
+            "title": "bold green",
+            "info": "bold blue",
+            "prompt": "bold yellow",
+            "success": "bold green",
+            "error": "bold red",
+            "sub": "cyan"
+        }
+        console.print(f"[{color_map.get(style, 'white')}){msg}[/{color_map.get(style, 'white')}]")
+    else:
+        print(msg)
+
+
+def prompt_input(message: str, default_val: str = "") -> str:
+    if HAS_RICH:
+        return Prompt.ask(f"[bold yellow]{message}[/bold yellow]", default=default_val)
+    else:
+        val = input(f"{message} [{default_val}]: ").strip()
+        return val if val else default_val
+
+
+def display_product_table(products: list):
+    if HAS_RICH:
+        table = Table(title="Hasil Pencarian Produk Shopee")
+        table.add_column("No", justify="center", style="cyan", no_wrap=True)
+        table.add_column("Nama Produk", style="magenta")
+        table.add_column("Harga (Rp)", justify="right", style="green")
+        table.add_column("Terjual", justify="right", style="yellow")
+        table.add_column("Rating", justify="center", style="bold blue")
+
+        for idx, p in enumerate(products, 1):
+            price_fmt = f"{p['price']:,.0f}".replace(",", ".")
+            table.add_row(str(idx), p['name'][:65], price_fmt, str(p['sold']), str(p['rating']))
+
+        console.print(table)
+    else:
+        print("\n=== Hasil Pencarian Produk Shopee ===")
+        print(f"{'No':<4} | {'Nama Produk':<50} | {'Harga (Rp)':<12} | {'Terjual':<8} | {'Rating':<6}")
+        print("-" * 90)
+        for idx, p in enumerate(products, 1):
+            price_fmt = f"{p['price']:,.0f}".replace(",", ".")
+            print(f"{idx:<4} | {p['name'][:50]:<50} | {price_fmt:<12} | {p['sold']:<8} | {p['rating']:<6}")
+        print("-" * 90)
+
+
+def main():
+    print_msg("=== Shopee Review Scraper (Python + Selenium) ===", "title")
+    print()
+    
+    keyword = prompt_input("Masukkan Keyword Pencarian Produk", default_val="kopi ulubelu lampung")
+    
+    print_msg("\nInisialisasi Selenium Chrome Browser...", "info")
+    browser = ShopeeBrowserManager(profile_dir="./shopee_profile", headless=False)
+    scraper = ShopeeScraper(browser)
+    
+    try:
+        print_msg(f"\nMencari produk dengan keyword: '{keyword}'...", "sub")
+        products = scraper.search_products(keyword, limit=20)
+        
+        if not products:
+            print_msg("Produk tidak ditemukan atau koneksi dibatasi oleh Shopee.", "error")
+            return
+            
+        display_product_table(products)
+        
+        choice = prompt_input(
+            "\nPilih nomor produk yang ingin diambil ulasannya (misal: 1 atau 1,2,3 atau 'all')",
+            default_val="1"
+        )
+        
+        selected_products = []
+        if choice.lower() == "all":
+            selected_products = products
+        else:
+            indices = [int(i.strip()) - 1 for i in choice.split(",") if i.strip().isdigit()]
+            for idx in indices:
+                if 0 <= idx < len(products):
+                    selected_products.append(products[idx])
+                    
+        if not selected_products:
+            print_msg("Pilihan produk tidak valid.", "error")
+            return
+
+        # Check QR Login
+        print_msg("\nMemeriksa status akun / QR Login Shopee...", "info")
+        browser.ensure_login(prompt_callback=lambda msg: print_msg(msg, "prompt"))
+        
+        all_reviews = []
+        
+        if HAS_RICH:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console
+            ) as progress:
+                for p in selected_products:
+                    task_id = progress.add_task(f"Mengambil ulasan '{p['name'][:30]}...'")
+                    
+                    def update_cb(count):
+                        progress.update(task_id, description=f"Mengambil ulasan '{p['name'][:30]}...' ({count} ulasan terambil)")
+                        
+                    reviews = scraper.fetch_reviews(p['item_id'], p['shop_id'], product_name=p['name'], progress_callback=update_cb)
+                    all_reviews.extend(reviews)
+                    progress.update(task_id, description=f"[green]Selesai! '{p['name'][:30]}...' ({len(reviews)} ulasan)[/green]")
+        else:
+            for p in selected_products:
+                print(f"Mengambil ulasan untuk '{p['name'][:40]}...'")
+                reviews = scraper.fetch_reviews(p['item_id'], p['shop_id'], product_name=p['name'])
+                all_reviews.extend(reviews)
+                print(f"Selesai! ({len(reviews)} ulasan terambil)")
+                
+        if not all_reviews:
+            print_msg("Tidak ada data ulasan yang berhasil diambil.", "error")
+            return
+            
+        print_msg(f"\nTotal {len(all_reviews)} ulasan berhasil diekstrak!", "success")
+        
+        fmt = prompt_input("\nPilih Format Export (excel / csv / json)", default_val="excel")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        ext = "xlsx" if fmt.lower() in ["excel", "xlsx"] else fmt.lower()
+        filename = f"shopee_reviews_{timestamp}.{ext}"
+        out_path = os.path.join("./output", filename)
+        
+        result_file = export_reviews(all_reviews, out_path, file_format=fmt)
+        print_msg(f"\n🎉 Data berhasil disimpan ke: {os.path.abspath(result_file)}", "success")
+
+    except Exception as e:
+        print_msg(f"\nTerjadi Kesalahan: {e}", "error")
+    finally:
+        browser.close()
+
+
+if __name__ == "__main__":
+    main()
