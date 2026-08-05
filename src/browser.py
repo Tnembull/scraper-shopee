@@ -24,6 +24,34 @@ except Exception:
     HAS_UC = False
     uc = None
 
+def parse_cookie_string(cookie_str: str) -> dict:
+    """Parse raw set-cookie headers or Cookie string into clean dict."""
+    cookies = {}
+    if not cookie_str:
+        return cookies
+        
+    lines = cookie_str.strip().splitlines()
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        if line.lower().startswith("set-cookie:"):
+            line = line[11:].strip()
+        elif line.lower().startswith("set-cookie"):
+            line = line[10:].strip()
+            
+        parts = line.split(";")
+        for part in parts:
+            part = part.strip()
+            if "=" in part:
+                k, v = part.split("=", 1)
+                k = k.strip()
+                v = v.strip()
+                if k.lower() not in ["path", "domain", "max-age", "httponly", "secure", "expires", "samesite"]:
+                    cookies[k] = v
+    return cookies
+
+
 class ShopeeBrowserManager:
     def __init__(self, profile_dir="./shopee_profile", headless=False):
         self.profile_dir = os.path.abspath(profile_dir)
@@ -89,8 +117,6 @@ class ShopeeBrowserManager:
             except Exception as e:
                 print(f"[Warning] Failed to start standard Chrome driver: {e}")
 
-
-
     def _apply_stealth_scripts(self):
         if self.driver:
             try:
@@ -112,25 +138,27 @@ class ShopeeBrowserManager:
 
     def check_logged_in(self) -> bool:
         """Check if user is currently logged into Shopee by scanning active cookies and URL."""
-        if not self.driver:
-            return False
-        try:
-            cookies = self.driver.get_cookies()
-            cookie_names = [c.get('name') for c in cookies]
-            has_cookie = any(name in cookie_names for name in ["SPC_EC", "SPC_U", "SPC_ST", "SPC_SI", "shopee_token"])
-            
-            current_url = self.driver.current_url or ""
-            if "buyer/login" not in current_url and "verify/" not in current_url:
-                if has_cookie or current_url.rstrip("/") == "https://shopee.co.id":
-                    return True
-            return has_cookie
-        except Exception:
-            return False
+        cookies = self.get_session_cookies()
+        has_cookie = any(name in cookies for name in ["SPC_EC", "SPC_U", "SPC_ST", "SPC_SI", "shopee_token"])
+        
+        if self.driver:
+            try:
+                current_url = self.driver.current_url or ""
+                if "buyer/login" not in current_url and "verify/" not in current_url:
+                    if has_cookie or current_url.rstrip("/") == "https://shopee.co.id":
+                        return True
+            except Exception:
+                pass
+        return has_cookie
 
     def ensure_login(self, prompt_callback=None, timeout_seconds=600) -> bool:
         """Ensure user is logged in. Opens Chrome and allows user to solve CAPTCHA / QR Code login manually."""
+        if self.check_logged_in():
+            return True
+            
         if not self.driver:
-            return False
+            return self.check_logged_in()
+            
         try:
             current_url = self.driver.current_url or ""
             if "shopee.co.id" not in current_url:
@@ -169,27 +197,40 @@ class ShopeeBrowserManager:
             print(f"[Error] Exception during login check: {e}")
             return False
 
-
-
-
     def get_session_cookies(self) -> dict:
-        """Extract cookies from Selenium driver or environment into cookie dict."""
+        """Extract cookies from env, cookies.txt/.env file, or Selenium driver."""
         cookies = {}
-        # 1. Try env cookie if provided
-        env_cookie_str = os.getenv("SHOPEE_COOKIE", "").strip()
-        if env_cookie_str:
-            for pair in env_cookie_str.split(";"):
-                if "=" in pair:
-                    k, v = pair.strip().split("=", 1)
-                    cookies[k.strip()] = v.strip()
-                    
-        # 2. Add/override cookies from active Selenium driver if available
+        
+        # 1. Read from cookies.txt or .env if file exists in project directory
+        for fname in ["cookies.txt", ".env"]:
+            if os.path.exists(fname):
+                try:
+                    with open(fname, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        if "COOKIE_STRING=" in content:
+                            for line in content.splitlines():
+                                if line.strip().startswith("COOKIE_STRING="):
+                                    c_str = line.split("COOKIE_STRING=", 1)[1].strip().strip('"').strip("'")
+                                    cookies.update(parse_cookie_string(c_str))
+                        else:
+                            cookies.update(parse_cookie_string(content))
+                except Exception:
+                    pass
+
+        # 2. Try env variables
+        for env_key in ["SHOPEE_COOKIE", "COOKIE_STRING"]:
+            env_val = os.getenv(env_key, "").strip()
+            if env_val:
+                cookies.update(parse_cookie_string(env_val))
+
+        # 3. Add/override cookies from active Selenium driver if available
         if self.driver:
             try:
                 for c in self.driver.get_cookies():
                     cookies[c['name']] = c['value']
             except Exception:
                 pass
+                
         return cookies
 
     def close(self):
@@ -199,4 +240,5 @@ class ShopeeBrowserManager:
             except Exception:
                 pass
             self.driver = None
+None
 

@@ -47,10 +47,13 @@ class ShopeeScraper:
     def __init__(self, browser_manager=None):
         self.browser_manager = browser_manager
         self.headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
             "Referer": "https://shopee.co.id/",
             "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "x-api-source": "pc",
+            "x-shopee-language": "id",
+            "x-requested-with": "XMLHttpRequest"
         }
 
     def _get_cookies(self) -> dict:
@@ -60,19 +63,24 @@ class ShopeeScraper:
 
     def _http_get_json(self, url: str, cookies: dict) -> dict:
         """Fetch JSON data from URL using requests or urllib fallback."""
+        headers = dict(self.headers)
+        if "search_items" in url:
+            headers["Referer"] = "https://shopee.co.id/search"
+            
         if HAS_REQUESTS and requests:
             try:
-                resp = requests.get(url, headers=self.headers, cookies=cookies, timeout=10)
+                resp = requests.get(url, headers=headers, cookies=cookies, timeout=10)
                 if resp.status_code == 200:
                     return resp.json()
             except Exception:
                 pass
                 
         # urllib fallback
-        req = urllib.request.Request(url, headers=self.headers)
+        req = urllib.request.Request(url, headers=headers)
         if cookies:
             cookie_str = "; ".join([f"{k}={v}" for k, v in cookies.items()])
             req.add_header("Cookie", cookie_str)
+
             
         try:
             with urllib.request.urlopen(req, timeout=10) as response:
