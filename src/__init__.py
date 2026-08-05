@@ -1,0 +1,1 @@
+"""Shopee Review Scraper Package"""
