@@ -41,9 +41,11 @@ class ShopeeBrowserManager:
                 options.add_argument("--no-sandbox")
                 options.add_argument("--disable-dev-shm-usage")
                 options.add_argument("--window-size=1280,800")
+                options.add_argument("--disable-blink-features=AutomationControlled")
                 if headless:
                     options.add_argument("--headless=new")
                 self.driver = uc.Chrome(options=options)
+                self._apply_stealth_scripts()
                 return
             except Exception as e:
                 print(f"[Warning] Failed to start undetected_chromedriver ({e}), falling back to standard Selenium Chrome...")
@@ -55,11 +57,31 @@ class ShopeeBrowserManager:
                 options.add_argument("--no-sandbox")
                 options.add_argument("--disable-dev-shm-usage")
                 options.add_argument("--window-size=1280,800")
+                options.add_argument("--disable-blink-features=AutomationControlled")
+                options.add_experimental_option("excludeSwitches", ["enable-automation"])
+                options.add_experimental_option('useAutomationExtension', False)
                 if headless:
                     options.add_argument("--headless=new")
                 self.driver = webdriver.Chrome(options=options)
+                self._apply_stealth_scripts()
             except Exception as e:
                 print(f"[Warning] Failed to start standard Chrome driver: {e}")
+
+    def _apply_stealth_scripts(self):
+        if self.driver:
+            try:
+                self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+                    "source": """
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined
+                    });
+                    """
+                })
+            except Exception:
+                try:
+                    self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                except Exception:
+                    pass
 
     def get_driver(self):
         return self.driver
@@ -74,8 +96,7 @@ class ShopeeBrowserManager:
             has_cookie = any(name in cookie_names for name in ["SPC_EC", "SPC_U", "SPC_ST", "SPC_SI", "shopee_token"])
             
             current_url = self.driver.current_url or ""
-            # If user has moved past login page and has cookies or is on main site
-            if "buyer/login" not in current_url and "verify/traffic" not in current_url:
+            if "buyer/login" not in current_url and "verify/" not in current_url:
                 if has_cookie or current_url.rstrip("/") == "https://shopee.co.id":
                     return True
             return has_cookie
@@ -88,18 +109,34 @@ class ShopeeBrowserManager:
             return False
         try:
             current_url = self.driver.current_url or ""
-            if "shopee.co.id" not in current_url or "buyer/login" in current_url or "verify/traffic" in current_url:
-                self.driver.get("https://shopee.co.id/buyer/login")
-                time.sleep(3)
-            
+            if "shopee.co.id" not in current_url:
+                self.driver.get("https://shopee.co.id/")
+                time.sleep(2)
+                
             if self.check_logged_in():
                 return True
                 
+            # If not logged in and not on login page, open login page
+            current_url = self.driver.current_url or ""
+            if "buyer/login" not in current_url:
+                self.driver.get("https://shopee.co.id/buyer/login")
+                time.sleep(2)
+                
             if prompt_callback:
-                prompt_callback("Silakan scan QR Code di browser Chrome yang terbuka untuk login ke akun Shopee Anda...")
+                prompt_callback("Silakan scan QR Code di browser Chrome (atau selesaikan CAPTCHA jika ada) untuk login ke akun Shopee...")
                 
             start_time = time.time()
+            prompted_captcha = False
+            
             while time.time() - start_time < timeout_seconds:
+                current_url = self.driver.current_url or ""
+                if "verify/captcha" in current_url or "verify/traffic" in current_url:
+                    if not prompted_captcha and prompt_callback:
+                        prompt_callback("⚠️ Terdeteksi CAPTCHA di browser. Silakan selesaikan CAPTCHA / klik 'Coba Lagi' & Login...")
+                        prompted_captcha = True
+                else:
+                    prompted_captcha = False
+                    
                 if self.check_logged_in():
                     return True
                 time.sleep(2)
@@ -108,6 +145,7 @@ class ShopeeBrowserManager:
         except Exception as e:
             print(f"[Error] Exception during login check: {e}")
             return False
+
 
 
     def get_session_cookies(self) -> dict:
