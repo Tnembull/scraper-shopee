@@ -82,24 +82,69 @@ class ShopeeScraper:
             pass
         return {}
 
+    def _fetch_json_via_browser(self, url: str) -> dict:
+        """Execute fetch in active Selenium browser context to bypass anti-bot blocks."""
+        if self.browser_manager and self.browser_manager.get_driver():
+            driver = self.browser_manager.get_driver()
+            try:
+                driver.set_script_timeout(10)
+                js_code = """
+                var callback = arguments[arguments.length - 1];
+                fetch(arguments[0], {
+                    headers: {
+                        "x-api-source": "pc",
+                        "x-shopee-language": "id",
+                        "x-requested-with": "XMLHttpRequest"
+                    },
+                    credentials: "include"
+                })
+                .then(r => r.json())
+                .then(data => callback(data))
+                .catch(err => callback({error: err.toString()}));
+                """
+                res = driver.execute_async_script(js_code, url)
+                if isinstance(res, dict) and "error" not in res and res:
+                    return res
+            except Exception as e:
+                pass
+        return {}
+
     def search_products(self, keyword: str, limit: int = 20) -> list:
         """Search products on Shopee by keyword."""
-        # Ensure browser is loaded to get valid session cookies
-        if self.browser_manager and self.browser_manager.get_driver():
+        encoded_kw = urllib.parse.quote(keyword)
+        url = f"https://shopee.co.id/api/v4/search/search_items?by=relevance&keyword={encoded_kw}&limit={limit}&newest=0&order=desc&page_type=search&scenario=PAGE_GLOBAL_SEARCH&version=2"
+        
+        driver = self.browser_manager.get_driver() if self.browser_manager else None
+        
+        # 1. Ensure browser is on shopee.co.id domain
+        if driver:
             try:
-                driver = self.browser_manager.get_driver()
                 if not driver.current_url or "shopee.co.id" not in driver.current_url:
                     driver.get("https://shopee.co.id/")
                     time.sleep(2)
             except Exception:
                 pass
 
-        cookies = self._get_cookies()
-        encoded_kw = urllib.parse.quote(keyword)
-        url = f"https://shopee.co.id/api/v4/search/search_items?by=relevance&keyword={encoded_kw}&limit={limit}&newest=0&order=desc&page_type=search&scenario=PAGE_GLOBAL_SEARCH&version=2"
-        
-        data = self._http_get_json(url, cookies)
+        # 2. Try fetching JSON directly via browser context (best & most reliable)
+        data = self._fetch_json_via_browser(url)
         items = data.get("items", []) or []
+
+        # 3. If empty, navigate browser to Shopee search page & retry JS fetch
+        if not items and driver:
+            try:
+                search_page_url = f"https://shopee.co.id/search?keyword={encoded_kw}"
+                driver.get(search_page_url)
+                time.sleep(4)
+                data = self._fetch_json_via_browser(url)
+                items = data.get("items", []) or []
+            except Exception:
+                pass
+
+        # 4. Fallback to HTTP request if browser fetch returned empty
+        if not items:
+            cookies = self._get_cookies()
+            data = self._http_get_json(url, cookies)
+            items = data.get("items", []) or []
         
         results = []
         for entry in items:
@@ -137,10 +182,13 @@ class ShopeeScraper:
                 
             rating = round(float(rating_star), 1)
 
-            # If sold or rating or total_reviews is missing, query item detail API
+            # If sold or rating or total_reviews is missing, query item detail API via browser
             if item_id and shop_id and (sold == 0 or rating == 0 or total_reviews == 0):
                 detail_url = f"https://shopee.co.id/api/v4/item/get?itemid={item_id}&shopid={shop_id}"
-                detail_data = self._http_get_json(detail_url, cookies).get("data", {}) or {}
+                detail_data = self._fetch_json_via_browser(detail_url).get("data", {}) or {}
+                if not detail_data:
+                    cookies = self._get_cookies()
+                    detail_data = self._http_get_json(detail_url, cookies).get("data", {}) or {}
                 if detail_data:
                     sold = detail_data.get("historical_sold") or detail_data.get("sold") or sold
                     total_reviews = detail_data.get("cmt_count") or total_reviews
@@ -159,7 +207,36 @@ class ShopeeScraper:
                     "total_reviews": total_reviews,
                     "url": f"https://shopee.co.id/product/{shop_id}/{item_id}"
                 })
+
+        # 5. DOM fallback if API calls completely failed
+        if not results and driver:
+            try:
+                cards = driver.find_elements("css selector", "a[href*='/product/'], a[data-sqe='link']")
+                seen_ids = set()
+                for card in cards:
+                    href = card.get_attribute("href") or ""
+                    if "/product/" in href:
+                        parts = href.split("/product/")[-1].split("?")[0].split("/")
+                        if len(parts) >= 2:
+                            shop_id, item_id = parts[0], parts[1]
+                            if item_id not in seen_ids:
+                                seen_ids.add(item_id)
+                                title = card.text.split("\n")[0] if card.text else "Produk Shopee"
+                                results.append({
+                                    "item_id": str(item_id),
+                                    "shop_id": str(shop_id),
+                                    "name": title,
+                                    "price": 0.0,
+                                    "sold": 0,
+                                    "rating": 0.0,
+                                    "total_reviews": 0,
+                                    "url": href
+                                })
+            except Exception:
+                pass
+
         return results
+
 
 
 
@@ -202,7 +279,9 @@ class ShopeeScraper:
 
         while not stop_fetching:
             url = f"https://shopee.co.id/api/v4/item/get_ratings?itemid={item_id}&shopid={shop_id}&limit={limit}&offset={offset}&type=0&filter=0"
-            data = self._http_get_json(url, cookies)
+            data = self._fetch_json_via_browser(url)
+            if not data:
+                data = self._http_get_json(url, cookies)
             
             ratings_data = data.get("data", {}) or {}
             ratings = ratings_data.get("ratings")
