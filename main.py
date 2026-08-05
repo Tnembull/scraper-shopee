@@ -27,7 +27,7 @@ def print_msg(msg: str, style: str = "info"):
             "error": "bold red",
             "sub": "cyan"
         }
-        console.print(f"[{color_map.get(style, 'white')}){msg}[/{color_map.get(style, 'white')}]")
+        console.print(f"[{color_map.get(style, 'white')}]{msg}[/{color_map.get(style, 'white')}]")
     else:
         print(msg)
 
