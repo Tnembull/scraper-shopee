@@ -103,8 +103,8 @@ class ShopeeBrowserManager:
         except Exception:
             return False
 
-    def ensure_login(self, prompt_callback=None, timeout_seconds=300) -> bool:
-        """Ensure user is logged in. If not, open login page for QR scan and wait for user."""
+    def ensure_login(self, prompt_callback=None, timeout_seconds=600) -> bool:
+        """Ensure user is logged in. Opens Chrome and allows user to solve CAPTCHA / QR Code login manually."""
         if not self.driver:
             return False
         try:
@@ -116,14 +116,13 @@ class ShopeeBrowserManager:
             if self.check_logged_in():
                 return True
                 
-            # If not logged in and not on login page, open login page
             current_url = self.driver.current_url or ""
-            if "buyer/login" not in current_url:
+            if "buyer/login" not in current_url and "verify/" not in current_url:
                 self.driver.get("https://shopee.co.id/buyer/login")
                 time.sleep(2)
                 
             if prompt_callback:
-                prompt_callback("Silakan scan QR Code di browser Chrome (atau selesaikan CAPTCHA jika ada) untuk login ke akun Shopee...")
+                prompt_callback("Silakan selesaikan CAPTCHA (klik 'Coba Lagi') / Scan QR Code di browser Chrome Anda...")
                 
             start_time = time.time()
             prompted_captcha = False
@@ -132,7 +131,7 @@ class ShopeeBrowserManager:
                 current_url = self.driver.current_url or ""
                 if "verify/captcha" in current_url or "verify/traffic" in current_url:
                     if not prompted_captcha and prompt_callback:
-                        prompt_callback("⚠️ Terdeteksi CAPTCHA di browser. Silakan selesaikan CAPTCHA / klik 'Coba Lagi' & Login...")
+                        prompt_callback("⚠️ Silakan selesaikan CAPTCHA atau klik 'Coba Lagi' di browser Chrome...")
                         prompted_captcha = True
                 else:
                     prompted_captcha = False
@@ -145,6 +144,7 @@ class ShopeeBrowserManager:
         except Exception as e:
             print(f"[Error] Exception during login check: {e}")
             return False
+
 
 
 
