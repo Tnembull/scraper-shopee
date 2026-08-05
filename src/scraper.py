@@ -84,6 +84,16 @@ class ShopeeScraper:
 
     def search_products(self, keyword: str, limit: int = 20) -> list:
         """Search products on Shopee by keyword."""
+        # Ensure browser is loaded to get valid session cookies
+        if self.browser_manager and self.browser_manager.get_driver():
+            try:
+                driver = self.browser_manager.get_driver()
+                if not driver.current_url or "shopee.co.id" not in driver.current_url:
+                    driver.get("https://shopee.co.id/")
+                    time.sleep(2)
+            except Exception:
+                pass
+
         cookies = self._get_cookies()
         encoded_kw = urllib.parse.quote(keyword)
         url = f"https://shopee.co.id/api/v4/search/search_items?by=relevance&keyword={encoded_kw}&limit={limit}&newest=0&order=desc&page_type=search&scenario=PAGE_GLOBAL_SEARCH&version=2"
@@ -93,14 +103,51 @@ class ShopeeScraper:
         
         results = []
         for entry in items:
-            item_basic = entry.get("item_basic", {}) or {}
-            item_id = item_basic.get("itemid")
-            shop_id = item_basic.get("shopid")
-            name = item_basic.get("name", "")
-            price = item_basic.get("price", 0) / 100000.0
-            sold = item_basic.get("historical_sold", 0)
-            rating = round(item_basic.get("item_rating", {}).get("rating_star", 0), 1)
+            if not isinstance(entry, dict):
+                continue
+            item_basic = entry.get("item_basic") if isinstance(entry.get("item_basic"), dict) else entry
             
+            item_id = item_basic.get("itemid") or entry.get("itemid")
+            shop_id = item_basic.get("shopid") or entry.get("shopid")
+            name = item_basic.get("name", "") or entry.get("name", "")
+            
+            raw_price = item_basic.get("price") or item_basic.get("price_min") or 0
+            price = float(raw_price) / 100000.0 if raw_price else 0.0
+            
+            sold = (
+                item_basic.get("historical_sold") or
+                item_basic.get("sold") or
+                item_basic.get("historical_sold_count") or
+                0
+            )
+            
+            item_rating = item_basic.get("item_rating") or entry.get("item_rating") or {}
+            rating_star = 0.0
+            total_reviews = 0
+            
+            if isinstance(item_rating, dict):
+                rating_star = item_rating.get("rating_star") or 0.0
+                rcounts = item_rating.get("rating_count") or []
+                if isinstance(rcounts, list) and len(rcounts) > 0:
+                    total_reviews = sum(rcounts)
+                else:
+                    total_reviews = item_basic.get("cmt_count") or item_basic.get("total_rating_count") or 0
+            else:
+                total_reviews = item_basic.get("cmt_count") or 0
+                
+            rating = round(float(rating_star), 1)
+
+            # If sold or rating or total_reviews is missing, query item detail API
+            if item_id and shop_id and (sold == 0 or rating == 0 or total_reviews == 0):
+                detail_url = f"https://shopee.co.id/api/v4/item/get?itemid={item_id}&shopid={shop_id}"
+                detail_data = self._http_get_json(detail_url, cookies).get("data", {}) or {}
+                if detail_data:
+                    sold = detail_data.get("historical_sold") or detail_data.get("sold") or sold
+                    total_reviews = detail_data.get("cmt_count") or total_reviews
+                    d_rating = detail_data.get("item_rating", {}) or {}
+                    if isinstance(d_rating, dict) and d_rating.get("rating_star"):
+                        rating = round(float(d_rating.get("rating_star")), 1)
+
             if item_id and shop_id:
                 results.append({
                     "item_id": str(item_id),
@@ -109,9 +156,12 @@ class ShopeeScraper:
                     "price": price,
                     "sold": sold,
                     "rating": rating,
+                    "total_reviews": total_reviews,
                     "url": f"https://shopee.co.id/product/{shop_id}/{item_id}"
                 })
         return results
+
+
 
     def fetch_reviews(
         self,

@@ -48,20 +48,28 @@ def display_product_table(products: list):
         table.add_column("Harga (Rp)", justify="right", style="green")
         table.add_column("Terjual", justify="right", style="yellow")
         table.add_column("Rating", justify="center", style="bold blue")
+        table.add_column("Total Ulasan", justify="right", style="bold cyan")
 
         for idx, p in enumerate(products, 1):
             price_fmt = f"{p['price']:,.0f}".replace(",", ".")
-            table.add_row(str(idx), p['name'][:65], price_fmt, str(p['sold']), str(p['rating']))
+            sold_str = f"{p['sold']:,}".replace(",", ".") if p.get('sold') else "-"
+            rating_str = str(p['rating']) if p.get('rating') else "-"
+            reviews_str = f"{p.get('total_reviews', 0):,}".replace(",", ".") if p.get('total_reviews') else "-"
+            table.add_row(str(idx), p['name'][:55], price_fmt, sold_str, rating_str, reviews_str)
 
         console.print(table)
     else:
         print("\n=== Hasil Pencarian Produk Shopee ===")
-        print(f"{'No':<4} | {'Nama Produk':<50} | {'Harga (Rp)':<12} | {'Terjual':<8} | {'Rating':<6}")
-        print("-" * 90)
+        print(f"{'No':<4} | {'Nama Produk':<45} | {'Harga (Rp)':<12} | {'Terjual':<8} | {'Rating':<6} | {'Total Ulasan':<12}")
+        print("-" * 105)
         for idx, p in enumerate(products, 1):
             price_fmt = f"{p['price']:,.0f}".replace(",", ".")
-            print(f"{idx:<4} | {p['name'][:50]:<50} | {price_fmt:<12} | {p['sold']:<8} | {p['rating']:<6}")
-        print("-" * 90)
+            sold_str = f"{p['sold']:,}".replace(",", ".") if p.get('sold') else "-"
+            rating_str = str(p['rating']) if p.get('rating') else "-"
+            reviews_str = f"{p.get('total_reviews', 0):,}".replace(",", ".") if p.get('total_reviews') else "-"
+            print(f"{idx:<4} | {p['name'][:45]:<45} | {price_fmt:<12} | {sold_str:<8} | {rating_str:<6} | {reviews_str:<12}")
+        print("-" * 105)
+
 
 
 def main():
