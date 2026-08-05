@@ -165,7 +165,8 @@ class ShopeeScraper:
             }]
 
         encoded_kw = urllib.parse.quote(keyword)
-        url = f"https://shopee.co.id/api/v4/search/search_items?by=relevance&keyword={encoded_kw}&limit={limit}&newest=0&order=desc&page_type=search&scenario=PAGE_GLOBAL_SEARCH&version=2"
+        url = f"https://shopee.co.id/api/v4/search/search_items?by=relevancy&keyword={encoded_kw}&limit={limit}&newest=0&order=desc&page_type=search&scenario=PAGE_GLOBAL_SEARCH&version=2"
+
         
         # 1. Navigate browser to Shopee search page directly
         if driver:
@@ -236,9 +237,14 @@ class ShopeeScraper:
                     "url": f"https://shopee.co.id/product/{shop_id}/{item_id}"
                 })
 
-        # 4. DOM Scanner fallback if API calls returned empty
+        # 4. Enhanced DOM Scanner fallback if API calls returned empty
         if not results and driver:
             try:
+                # Scroll multiple times to allow Shopee dynamic list to render fully
+                for _ in range(3):
+                    driver.execute_script("window.scrollBy(0, 600);")
+                    time.sleep(1)
+                    
                 js_dom_scanner = """
                 var items = [];
                 var seen = {};
@@ -253,12 +259,48 @@ class ShopeeScraper:
                         var itemId = match1 ? match1[2] : match2[2];
                         if (!seen[itemId]) {
                             seen[itemId] = true;
-                            var title = a.innerText.replace(/\\s+/g, ' ').trim();
+                            
+                            var parent = a.closest('li') || a.closest('div') || a;
+                            var fullText = parent.innerText || a.innerText || '';
+                            
+                            // Extract title
+                            var title = '';
+                            var img = a.querySelector('img');
+                            if (img && img.alt && img.alt.trim().length > 3) {
+                                title = img.alt.trim();
+                            } else {
+                                title = a.innerText.replace(/\\s+/g, ' ').trim();
+                            }
+                            
+                            // Extract price
+                            var price = 0;
+                            var priceMatch = fullText.match(/Rp\\s*([\\d\\.\\,]+)/);
+                            if (priceMatch) {
+                                var cleanP = priceMatch[1].replace(/[^\\d]/g, '');
+                                if (cleanP) price = parseFloat(cleanP);
+                            }
+                            
+                            // Extract sold
+                            var sold = 0;
+                            var soldMatch = fullText.match(/([\\d\\,\\.]+\\s*(?:RB|rb|k|K)?)\\s*Terjual/i);
+                            if (soldMatch) {
+                                var sStr = soldMatch[1].toLowerCase().replace(',', '.');
+                                if (sStr.includes('rb') || sStr.includes('k')) {
+                                    sold = Math.round(parseFloat(sStr) * 1000);
+                                } else {
+                                    sold = parseInt(sStr.replace(/[^\\d]/g, '')) || 0;
+                                }
+                            }
+
                             items.push({
                                 item_id: itemId,
                                 shop_id: shopId,
                                 name: title || ('Produk Shopee (' + itemId + ')'),
-                                url: href
+                                price: price,
+                                sold: sold,
+                                rating: 5.0,
+                                total_reviews: 0,
+                                url: href.startsWith('http') ? href : ('https://shopee.co.id' + href)
                             });
                         }
                     }
@@ -272,16 +314,17 @@ class ShopeeScraper:
                             "item_id": str(d_item["item_id"]),
                             "shop_id": str(d_item["shop_id"]),
                             "name": d_item["name"],
-                            "price": 0.0,
-                            "sold": 0,
-                            "rating": 0.0,
-                            "total_reviews": 0,
+                            "price": float(d_item.get("price", 0)),
+                            "sold": int(d_item.get("sold", 0)),
+                            "rating": float(d_item.get("rating", 0.0)),
+                            "total_reviews": int(d_item.get("total_reviews", 0)),
                             "url": d_item["url"]
                         })
             except Exception:
                 pass
 
         return results
+
 
 
 
