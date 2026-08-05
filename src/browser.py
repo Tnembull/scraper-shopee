@@ -65,23 +65,32 @@ class ShopeeBrowserManager:
         return self.driver
 
     def check_logged_in(self) -> bool:
-        """Check if user is currently logged into Shopee by scanning active cookies."""
+        """Check if user is currently logged into Shopee by scanning active cookies and URL."""
         if not self.driver:
             return False
         try:
             cookies = self.driver.get_cookies()
             cookie_names = [c.get('name') for c in cookies]
-            return "SPC_EC" in cookie_names or "SPC_U" in cookie_names or "SPC_ST" in cookie_names
+            has_cookie = any(name in cookie_names for name in ["SPC_EC", "SPC_U", "SPC_ST", "SPC_SI", "shopee_token"])
+            
+            current_url = self.driver.current_url or ""
+            # If user has moved past login page and has cookies or is on main site
+            if "buyer/login" not in current_url and "verify/traffic" not in current_url:
+                if has_cookie or current_url.rstrip("/") == "https://shopee.co.id":
+                    return True
+            return has_cookie
         except Exception:
             return False
 
-    def ensure_login(self, prompt_callback=None, timeout_seconds=180) -> bool:
-        """Ensure user is logged in. If not, open login page for QR scan and wait."""
+    def ensure_login(self, prompt_callback=None, timeout_seconds=300) -> bool:
+        """Ensure user is logged in. If not, open login page for QR scan and wait for user."""
         if not self.driver:
             return False
         try:
-            self.driver.get("https://shopee.co.id/buyer/login")
-            time.sleep(3)
+            current_url = self.driver.current_url or ""
+            if "shopee.co.id" not in current_url or "buyer/login" in current_url or "verify/traffic" in current_url:
+                self.driver.get("https://shopee.co.id/buyer/login")
+                time.sleep(3)
             
             if self.check_logged_in():
                 return True
@@ -99,6 +108,7 @@ class ShopeeBrowserManager:
         except Exception as e:
             print(f"[Error] Exception during login check: {e}")
             return False
+
 
     def get_session_cookies(self) -> dict:
         """Extract cookies from Selenium driver into cookie dict."""

@@ -76,13 +76,22 @@ def main():
     print_msg("=== Shopee Review Scraper (Python + Selenium) ===", "title")
     print()
     
-    keyword = prompt_input("Masukkan Keyword Pencarian Produk", default_val="kopi ulubelu lampung")
-    
     print_msg("\nInisialisasi Selenium Chrome Browser...", "info")
     browser = ShopeeBrowserManager(profile_dir="./shopee_profile", headless=False)
     scraper = ShopeeScraper(browser)
     
     try:
+        # Step 1: Ensure user is LOGGED IN first before searching
+        print_msg("\n[Step 1] Memeriksa status akun / QR Login Shopee...", "info")
+        logged_in = browser.ensure_login(prompt_callback=lambda msg: print_msg(msg, "prompt"))
+        if logged_in:
+            print_msg("✅ Login terdeteksi! Akun Shopee aktif.", "success")
+        else:
+            print_msg("⚠️ Peringatan: Login belum terdeteksi.", "prompt")
+
+        # Step 2: Prompt for keyword / product link
+        keyword = prompt_input("\n[Step 2] Masukkan Keyword Pencarian Produk / Link Shopee", default_val="kopi ulubelu lampung")
+
         print_msg(f"\nMencari produk dengan keyword: '{keyword}'...", "sub")
         products = scraper.search_products(keyword, limit=20)
         
@@ -110,14 +119,11 @@ def main():
             print_msg("Pilihan produk tidak valid.", "error")
             return
 
-        # Date Range Filter Prompts
-        print_msg("\n[Filter Tanggal Ulasan]", "info")
+        # Step 3: Date Range Filter Prompts
+        print_msg("\n[Step 3] Filter Tanggal Ulasan", "info")
         start_date = prompt_input("Tanggal Mulai (YYYY-MM-DD)", default_val="2025-01-01")
         end_date = prompt_input("Tanggal Akhir (YYYY-MM-DD)", default_val="2025-06-30")
 
-        # Check QR Login
-        print_msg("\nMemeriksa status akun / QR Login Shopee...", "info")
-        browser.ensure_login(prompt_callback=lambda msg: print_msg(msg, "prompt"))
         
         all_reviews = []
         
