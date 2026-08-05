@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+shopee_profile/
+output/
+test_profile_dir/
