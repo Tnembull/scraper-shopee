@@ -83,14 +83,16 @@ def main():
     try:
         # Step 1: Ensure user is LOGGED IN first before searching
         print_msg("\n[Step 1] Memeriksa status akun / QR Login Shopee...", "info")
-        logged_in = browser.ensure_login(prompt_callback=lambda msg: print_msg(msg, "prompt"))
+        logged_in = browser.ensure_login(prompt_callback=lambda msg: print_msg(msg, "prompt"), timeout_seconds=15)
         if logged_in:
             print_msg("✅ Login terdeteksi! Akun Shopee aktif.", "success")
         else:
-            print_msg("⚠️ Peringatan: Login belum terdeteksi.", "prompt")
+            print_msg("⚠️ Browser otomatis terhalang anti-bot CAPTCHA Shopee.", "prompt")
+            print_msg("💡 Solusi: Anda dapat menggunakan cookie akun browser asli yang telah ada di sistem.", "sub")
 
         # Step 2: Prompt for keyword / product link
         keyword = prompt_input("\n[Step 2] Masukkan Keyword Pencarian Produk / Link Shopee", default_val="kopi ulubelu lampung")
+
 
         print_msg(f"\nMencari produk dengan keyword: '{keyword}'...", "sub")
         products = scraper.search_products(keyword, limit=20)

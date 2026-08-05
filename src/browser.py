@@ -173,8 +173,17 @@ class ShopeeBrowserManager:
 
 
     def get_session_cookies(self) -> dict:
-        """Extract cookies from Selenium driver into cookie dict."""
+        """Extract cookies from Selenium driver or environment into cookie dict."""
         cookies = {}
+        # 1. Try env cookie if provided
+        env_cookie_str = os.getenv("SHOPEE_COOKIE", "").strip()
+        if env_cookie_str:
+            for pair in env_cookie_str.split(";"):
+                if "=" in pair:
+                    k, v = pair.strip().split("=", 1)
+                    cookies[k.strip()] = v.strip()
+                    
+        # 2. Add/override cookies from active Selenium driver if available
         if self.driver:
             try:
                 for c in self.driver.get_cookies():
@@ -190,3 +199,4 @@ class ShopeeBrowserManager:
             except Exception:
                 pass
             self.driver = None
+
