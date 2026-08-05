@@ -113,14 +113,44 @@ class ShopeeScraper:
                 })
         return results
 
-    def fetch_reviews(self, item_id: str, shop_id: str, product_name: str = "", progress_callback=None) -> list:
-        """Fetch all reviews for a given product Item ID and Shop ID."""
+    def fetch_reviews(
+        self,
+        item_id: str,
+        shop_id: str,
+        product_name: str = "",
+        start_date: str = None,
+        end_date: str = None,
+        progress_callback = None
+    ) -> list:
+        """
+        Fetch reviews for a given product Item ID and Shop ID.
+        Optionally filter by start_date ('YYYY-MM-DD') and end_date ('YYYY-MM-DD').
+        """
         cookies = self._get_cookies()
         reviews = []
         offset = 0
         limit = 50
         
-        while True:
+        start_ts = None
+        end_ts = None
+        
+        if start_date:
+            try:
+                dt = datetime.datetime.strptime(start_date.strip(), "%Y-%m-%d")
+                start_ts = dt.timestamp()
+            except Exception:
+                pass
+
+        if end_date:
+            try:
+                dt = datetime.datetime.strptime(end_date.strip() + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+                end_ts = dt.timestamp()
+            except Exception:
+                pass
+        
+        stop_fetching = False
+
+        while not stop_fetching:
             url = f"https://shopee.co.id/api/v4/item/get_ratings?itemid={item_id}&shopid={shop_id}&limit={limit}&offset={offset}&type=0&filter=0"
             data = self._http_get_json(url, cookies)
             
@@ -130,6 +160,18 @@ class ShopeeScraper:
                 break
                 
             for r in ratings:
+                mtime = r.get("mtime", 0)
+                
+                # If end date constraint is set and review is newer than end_date, skip
+                if end_ts and mtime > end_ts:
+                    continue
+                    
+                # If start date constraint is set and review is older than start_date:
+                # Since Shopee returns reviews newest-first, we can stop fetching further offsets
+                if start_ts and mtime < start_ts:
+                    stop_fetching = True
+                    break
+                    
                 parsed = parse_rating_item(r, product_name)
                 reviews.append(parsed)
                 
@@ -140,3 +182,4 @@ class ShopeeScraper:
             time.sleep(1)
                 
         return reviews
+

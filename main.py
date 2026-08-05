@@ -102,6 +102,11 @@ def main():
             print_msg("Pilihan produk tidak valid.", "error")
             return
 
+        # Date Range Filter Prompts
+        print_msg("\n[Filter Tanggal Ulasan]", "info")
+        start_date = prompt_input("Tanggal Mulai (YYYY-MM-DD)", default_val="2025-01-01")
+        end_date = prompt_input("Tanggal Akhir (YYYY-MM-DD)", default_val="2025-06-30")
+
         # Check QR Login
         print_msg("\nMemeriksa status akun / QR Login Shopee...", "info")
         browser.ensure_login(prompt_callback=lambda msg: print_msg(msg, "prompt"))
@@ -120,15 +125,29 @@ def main():
                     def update_cb(count):
                         progress.update(task_id, description=f"Mengambil ulasan '{p['name'][:30]}...' ({count} ulasan terambil)")
                         
-                    reviews = scraper.fetch_reviews(p['item_id'], p['shop_id'], product_name=p['name'], progress_callback=update_cb)
+                    reviews = scraper.fetch_reviews(
+                        p['item_id'],
+                        p['shop_id'],
+                        product_name=p['name'],
+                        start_date=start_date,
+                        end_date=end_date,
+                        progress_callback=update_cb
+                    )
                     all_reviews.extend(reviews)
                     progress.update(task_id, description=f"[green]Selesai! '{p['name'][:30]}...' ({len(reviews)} ulasan)[/green]")
         else:
             for p in selected_products:
-                print(f"Mengambil ulasan untuk '{p['name'][:40]}...'")
-                reviews = scraper.fetch_reviews(p['item_id'], p['shop_id'], product_name=p['name'])
+                print(f"Mengambil ulasan untuk '{p['name'][:40]}...' (Rentang: {start_date} s/d {end_date})")
+                reviews = scraper.fetch_reviews(
+                    p['item_id'],
+                    p['shop_id'],
+                    product_name=p['name'],
+                    start_date=start_date,
+                    end_date=end_date
+                )
                 all_reviews.extend(reviews)
                 print(f"Selesai! ({len(reviews)} ulasan terambil)")
+
                 
         if not all_reviews:
             print_msg("Tidak ada data ulasan yang berhasil diambil.", "error")
