@@ -34,6 +34,8 @@ class ShopeeBrowserManager:
             self._init_driver(headless=headless)
 
     def _init_driver(self, headless=False):
+        chrome_binary = "/usr/bin/google-chrome"
+        
         if HAS_UC and uc:
             try:
                 options = uc.ChromeOptions()
@@ -42,9 +44,15 @@ class ShopeeBrowserManager:
                 options.add_argument("--disable-dev-shm-usage")
                 options.add_argument("--window-size=1280,800")
                 options.add_argument("--disable-blink-features=AutomationControlled")
+                options.add_argument("--disable-popup-blocking")
                 if headless:
                     options.add_argument("--headless=new")
-                self.driver = uc.Chrome(options=options)
+                    
+                self.driver = uc.Chrome(
+                    options=options,
+                    browser_executable_path=chrome_binary if os.path.exists(chrome_binary) else None,
+                    use_subprocess=True
+                )
                 self._apply_stealth_scripts()
                 return
             except Exception as e:
@@ -58,14 +66,17 @@ class ShopeeBrowserManager:
                 options.add_argument("--disable-dev-shm-usage")
                 options.add_argument("--window-size=1280,800")
                 options.add_argument("--disable-blink-features=AutomationControlled")
-                options.add_experimental_option("excludeSwitches", ["enable-automation"])
+                options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
                 options.add_experimental_option('useAutomationExtension', False)
+                if os.path.exists(chrome_binary):
+                    options.binary_location = chrome_binary
                 if headless:
                     options.add_argument("--headless=new")
                 self.driver = webdriver.Chrome(options=options)
                 self._apply_stealth_scripts()
             except Exception as e:
                 print(f"[Warning] Failed to start standard Chrome driver: {e}")
+
 
     def _apply_stealth_scripts(self):
         if self.driver:
