@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopee Scraper Extension</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-light: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --card-border: #E2E8F0;
+      --primary-gradient: linear-gradient(135deg, #FF5722 0%, #EE4D2D 100%);
+      --primary-hover: linear-gradient(135deg, #F4511E 0%, #D73211 100%);
+      --success-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      --danger-gradient: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      --github-bg: #24292F;
+      --github-hover: #1F2328;
+      --accent-cyan: #0284C7;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 440px;
+      padding: 20px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-main);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(238, 77, 45, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(2, 132, 199, 0.04) 0%, transparent 40%);
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: var(--primary-gradient);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 10px rgba(238, 77, 45, 0.25);
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text-main);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pro-badge {
+      background: #FFECE8;
+      color: #EE4D2D;
+      border: 1px solid rgba(238, 77, 45, 0.3);
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-github-icon {
+      background: var(--github-bg);
+      color: #FFFFFF;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-github-icon:hover {
+      background: var(--github-hover);
+      transform: translateY(-1px);
+    }
+
+    /* Dashboard Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px 4px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 2px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Form Controls */
+    .input-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    input[type="url"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 13px;
+      font-family: inherit;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    input[type="url"]:focus,
+    input[type="number"]:focus {
+      border-color: #EE4D2D;
+      box-shadow: 0 0 0 3px rgba(238, 77, 45, 0.15);
+    }
+
+    .input-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Filter Rating Pills */
+    .filter-section {
+      margin-bottom: 14px;
+    }
+
+    .filter-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 6px;
+    }
+
+    .pill {
+      flex: 1;
+      padding: 7px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .pill.active {
+      background: #FFECE8;
+      border-color: #EE4D2D;
+      color: #EE4D2D;
+    }
+
+    /* Button Suite */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .btn-full {
+      grid-column: span 2;
+    }
+
+    button {
+      padding: 11px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: white;
+      box-shadow: 0 4px 12px rgba(238, 77, 45, 0.25);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+      box-shadow: 0 6px 16px rgba(238, 77, 45, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      background: var(--danger-gradient);
+      color: white;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    .btn-success {
+      background: var(--success-gradient);
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-success:hover:not(:disabled) {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #F0F9FF;
+      color: var(--accent-cyan);
+      border: 1px solid #BAE6FD;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #E0F2FE;
+      transform: translateY(-1px);
+    }
+
+    .btn-github {
+      background: var(--github-bg);
+      color: white;
+      border: 1px solid #1F2328;
+    }
+
+    .btn-github:hover:not(:disabled) {
+      background: var(--github-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: #F1F5F9;
+      color: #475569;
+      border: 1px solid #E2E8F0;
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background: #E2E8F0;
+      color: #1E293B;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Status Bar */
+    .status {
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      display: none;
+      line-height: 1.4;
+    }
+
+    .status.success {
+      background: #ECFDF5;
+      color: #047857;
+      border: 1px solid #A7F3D0;
+    }
+
+    .status.error {
+      background: #FEF2F2;
+      color: #B91C1C;
+      border: 1px solid #FECACA;
+    }
+
+    .status.info {
+      background: #F0F9FF;
+      color: #0369A1;
+      border: 1px solid #BAE6FD;
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+      width: 100%;
+      height: 14px;
+      background: #E2E8F0;
+      border-radius: 10px;
+      overflow: hidden;
+      display: none;
+      margin-bottom: 14px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary-gradient);
+      width: 0%;
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* Live Preview Accordion */
+    .preview-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 10px;
+      box-shadow: var(--shadow-sm);
+      display: none;
+    }
+
+    .preview-header {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .preview-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+
+    .preview-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .preview-user {
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .preview-stars {
+      color: #F59E0B;
+    }
+
+    .preview-text {
+      color: #475569;
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">🛒</div>
+      <div class="brand-title">Shopee Scraper Extension</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-github-icon" id="githubHeaderBtn" title="Buka GitHub Repository">
+        <svg height="14" width="14" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        <span>GitHub</span>
+      </button>
+      <span class="pro-badge">v1.0.0</span>
+    </div>
+  </div>
+
+  <!-- Dashboard Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" id="totalCount">0</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="positifCount" style="color: #059669;">0</div>
+      <div class="stat-label">😊 Positif</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="netralCount" style="color: #0284C7;">0</div>
+      <div class="stat-label">😐 Netral</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="negatifCount" style="color: #DC2626;">0</div>
+      <div class="stat-label">😡 Negatif</div>
+    </div>
+  </div>
+
+  <!-- Form Inputs -->
+  <div class="input-group">
+    <label for="shopeeUrl">🔗 URL Produk Shopee:</label>
+    <input 
+      type="url" 
+      id="shopeeUrl" 
+      placeholder="https://shopee.co.id/product-name-i.123456.789012"
+      required
+    >
+  </div>
+
+  <div class="input-group">
+    <label for="maxPages">📄 Maksimal Halaman Ulasan:</label>
+    <input 
+      type="number" 
+      id="maxPages" 
+      min="1" 
+      max="500" 
+      value="10"
+      required
+    >
+    <div class="input-hint">
+      <span>⚡ ~7 detik per halaman</span>
+      <span>⏱️ Estimasi: <strong id="estimatedTime" style="color: #0F172A;">70s</strong></span>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="filter-section">
+    <div class="filter-label">Filter Tampilan / Export:</div>
+    <div class="filter-pills">
+      <div class="pill active" id="filterAll">Semua</div>
+      <div class="pill" id="filterPositif">😊 Positif</div>
+      <div class="pill" id="filterNetral">😐 Netral</div>
+      <div class="pill" id="filterNegatif">😡 Negatif</div>
+    </div>
+  </div>
+
+  <!-- Status & Progress -->
+  <div class="status" id="status"></div>
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-fill" id="progressFill">0%</div>
+  </div>
+
+  <!-- Main Action Buttons Suite -->
+  <div class="btn-grid">
+    <button class="btn-primary btn-full" id="scrapeBtn">
+      <span>🚀 Mulai Scraping</span>
+    </button>
+    <button class="btn-danger btn-full" id="stopBtn" style="display: none;">
+      <span>⛔ Hentikan Process</span>
+    </button>
+    
+    <button class="btn-success" id="exportBtn" disabled>
+      <span>📥 Export CSV</span>
+    </button>
+    <button class="btn-secondary" id="copyBtn" disabled>
+      <span>📋 Copy CSV</span>
+    </button>
+    
+    <button class="btn-github btn-full" id="githubBtn">
+      <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      <span>Buka Repository GitHub</span>
+    </button>
+    
+    <button class="btn-ghost btn-full" id="resetBtn">
+      <span>🗑️ Reset / Hapus Data</span>
+    </button>
+  </div>
+
+  <!-- Live Preview -->
+  <div class="preview-box" id="previewContainer">
+    <div class="preview-header">
+      <span>👀 Live Preview (3 Ulasan Terbaru)</span>
+    </div>
+    <div id="previewList"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

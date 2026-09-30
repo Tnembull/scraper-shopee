@@ -1,56 +1,111 @@
-# Shopee Review Scraper (Python + Selenium)
+# Shopee Review Scraper Suite (Python CLI & Chrome Extension)
 
-Tools scraping ulasan produk Shopee interaktif berbasis Python & Selenium dengan dukungan **QR Code Login**.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python: 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![Chrome Extension](https://img.shields.io/badge/Chrome_Extension-Manifest_V3-orange.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
+[![Code Style: Flake8](https://img.shields.io/badge/code%20style-pep8-brightgreen.svg)](https://www.python.org/dev/peps/pep-0008/)
 
-## 🌟 Fitur Utama
-1. **Pencarian Berdasarkan Keyword**: Cukup masukkan kata kunci (contoh: `kopi ulubelu lampung`), scraper akan mencari produk relevan di Shopee.
-2. **Pemilihan Produk Interaktif**: Menampilkan tabel produk lengkap (Nama, Harga, Terjual, Rating). Anda bisa memilih 1 produk, beberapa produk (`1,2,3`), atau semua produk (`all`).
-3. **Session & QR Code Login Persistence**: Browser Chrome akan terbuka. Jika belum login, Anda bisa scan QR code sekali saja di Shopee. Sesi login tersimpan secara permanen di folder `./shopee_profile/` sehingga tidak perlu QR login berulang kali.
-4. **Data Ulasan 100% Lengkap**:
-   - Username Pembeli / Reviewer
-   - Rating Bintang (1 - 5)
-   - Tanggal & Waktu Ulasan (Format `YYYY-MM-DD HH:MM:SS`)
-   - Variasi Produk yang Dibeli (misal: `250g / Fine`)
-   - Teks Komentar Ulasan
-   - Link Foto & Video Ulasan (URL media beresolusi tinggi)
-   - Respon/Balasan dari Penjual
-5. **Multi-Format Export**: Simpan hasil scraping ke file **Excel (`.xlsx`)**, **CSV**, atau **JSON** secara otomatis di folder `./output/`.
+All-in-one suite untuk scraping ulasan dan data produk Shopee Indonesia dengan dua pilihan implementasi: **Python CLI (Automation)** dan **Chrome Extension (GUI Manifest V3)**.
 
 ---
 
-## 🚀 Cara Penggunaan
+## 🎯 Pilih Solusi yang Sesuai Kebutuhan Anda
 
-### 1. Install Dependencies
-Buka terminal / Command Prompt di folder projek dan jalankan:
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Jalankan Program
-```bash
-python main.py
-```
-
-### 3. Alur Penggunaan
-1. **Masukkan Keyword**: Ketik kata kunci produk (misal: `kopi ulubelu lampung`).
-2. **Pilih Produk**: Ketik nomor produk dari tabel hasil pencarian.
-3. **QR Code Login**: Browser Chrome akan terbuka. Jika diminta login, lakukan scan QR Code pada aplikasi Shopee di HP Anda.
-4. **Proses Scraping**: Program akan mengunduh ulasan dan menampilkan indikator kemajuan.
-5. **Download Hasil**: Pilih format export (`excel`, `csv`, atau `json`). File hasil akan tersimpan di folder `./output/`.
+| Fitur / Karakteristik | 🐍 Python CLI (`python-cli/`) | 🧩 Chrome Extension (`chrome-extension/`) |
+| :--- | :--- | :--- |
+| **Target Pengguna** | Data Analyst, Developer, Peneliti | Pengguna Kasual, Merchant, Business Owner |
+| **Metode Akses** | Terminal / Command Line | Popup Browser Google Chrome |
+| **Autentikasi** | QR Code Login & Persistent Session | Otomatis mengikuti sesi login browser Anda |
+| **Format Ekspor** | Excel (`.xlsx`), CSV, JSON | CSV (UTF-8 BOM, Excel-friendly) |
+| **Fitur Khusus** | Batch search & multi-product selection | Dashboard rating filter (Positif/Netral/Negatif) |
 
 ---
 
-## 📁 Struktur Direktori Projek
+## 📦 1. Chrome Extension (Manifest V3)
+
+Ekstensi browser Chrome modern untuk mengambil komentar langsung dari tab produk Shopee yang sedang Anda buka.
+
+### Fitur Utama:
+- **Clean Light Mode**: Antarmuka modern, responsif, dan mudah dipahami.
+- **Rating Filtering**: Filter ulasan berdasarkan sentimen: Semua, Positif (4-5★), Netral (3★), atau Negatif (1-2★).
+- **Abort Controller**: Hentikan proses scraping sewaktu-waktu tanpa kehilangan data ulasan yang sudah terambil.
+- **Ekspor Cepat**: Ekspor ke CSV dengan penamaan file otomatis sesuai nama produk, atau salin langsung ke clipboard.
+
+### Cara Penggunaan:
+1. Buka `chrome://extensions` di Google Chrome.
+2. Aktifkan **Developer mode** di pojok kanan atas.
+3. Klik tombol **Load unpacked**, lalu pilih folder `chrome-extension/`.
+4. Buka halaman produk Shopee di browser, klik ikon ekstensi di toolbar, dan tekan **Mulai Scraping**.
+
+---
+
+## 🐍 2. Python CLI & Selenium Automation
+
+Engine otomatisasi headless/interaktif berbasis Python dan Selenium untuk scraping data skala besar.
+
+### Fitur Utama:
+- **Pencarian Berdasarkan Keyword**: Cukup masukkan kata kunci produk, CLI akan menampilkan daftar produk relevan dalam bentuk tabel interaktif.
+- **Persistent QR Code Login**: Cukup scan QR code Shopee sekali; sesi login otomatis disimpan di `./shopee_profile/` untuk penggunaan berikutnya.
+- **Metadata Ulasan Komprehensif**:
+  - Username pengulas
+  - Rating bintang (1 - 5)
+  - Timestamp ulasan (`YYYY-MM-DD HH:MM:SS`)
+  - Variasi produk yang dibeli
+  - Komentar teks lengkap
+  - URL foto & video resolusi tinggi
+  - Balasan / respon dari penjual
+- **Multi-Format Export**: Ekspor otomatis ke folder `output/` dalam format `.xlsx`, `.csv`, atau `.json`.
+
+### Cara Penggunaan:
+1. Masuk ke direktori CLI:
+   ```bash
+   cd python-cli
+   ```
+2. Pasang library yang dibutuhkan:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Jalankan CLI:
+   ```bash
+   python main.py
+   ```
+4. Masukkan keyword pencarian, pilih nomor produk yang ingin di-scrape, dan tentukan format ekspor hasil.
+
+---
+
+## 📁 Struktur Monorepo
+
+```text
+scraper-shopee/
+├── chrome-extension/         # Source code Google Chrome Extension (Manifest V3)
+│   ├── manifest.json         # Extension manifest configuration
+│   ├── popup.html            # User interface popup
+│   ├── popup.js              # State & DOM event handlers
+│   ├── content.js            # Injected DOM scraping engine
+│   └── background.js         # Service worker & message passing
+│
+├── python-cli/               # Source code Python Automation CLI
+│   ├── src/                  # Browser manager, scraping engine & exporter
+│   ├── tests/                # Unit test suites
+│   ├── main.py               # Main CLI interactive launcher
+│   └── requirements.txt      # Python dependencies
+│
+├── .github/workflows/        # Automated CI/CD quality pipelines
+├── CONTRIBUTING.md           # Panduan kontribusi komunitas
+├── LICENSE                   # Open Source MIT License
+└── README.md                 # Dokumentasi utama
 ```
-shopee-scraping-ulasan/
-├── shopee_profile/      # Folder profil Chrome (penyimpan sesi QR login)
-├── output/              # Folder tempat menyimpan hasil scraping (Excel/CSV/JSON)
-├── src/
-│   ├── browser.py       # Pengelola browser Selenium & QR login
-│   ├── scraper.py       # Mesin pencari produk & pengambil ulasan
-│   └── exporter.py      # Pengolah ekspor data ke Excel/CSV/JSON
-├── tests/               # Pengujian unit test
-├── main.py              # Antarmuka CLI utama
-├── requirements.txt     # Daftar dependensi Python
-└── README.md            # Dokumentasi panduan
-```
+
+---
+
+## 🤝 Kontribusi
+
+Pull Request dan kontribusi selalu diterima dengan hangat! Silakan cek panduan di [CONTRIBUTING.md](CONTRIBUTING.md) sebelum mengajukan perubahan.
+
+---
+
+## 📄 Lisensi & Disclaimer
+
+Proyek ini dilisensikan di bawah **[MIT License](LICENSE)**.
+
+*Disclaimer: Proyek ini dibuat semata-mata untuk tujuan riset, edukasi, dan analisis data. Harap selalu mematuhi Syarat & Ketentuan serta robots.txt Shopee. Gunakan dengan bijak dan bertanggung jawab.*

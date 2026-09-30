@@ -1,6 +1,26 @@
+# Python bytecode
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+*.env
+venv/
 .venv/
+env/
+
+# Chrome driver & profiles
 shopee_profile/
+chromedriver
+*.log
+
+# Output data
 output/
-test_profile_dir/
+*.xlsx
+*.csv
+*.json
+
+# OS specific
+.DS_Store
+Thumbs.db

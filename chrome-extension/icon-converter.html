@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SVG to PNG Converter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #ee4d2d;
+    }
+    .converter {
+      border: 2px solid #ddd;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    button {
+      background-color: #ee4d2d;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background-color: #d73211;
+    }
+    .output {
+      margin-top: 20px;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      margin: 10px;
+    }
+    .instructions {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 Icon Converter - SVG to PNG</h1>
+  
+  <div class="instructions">
+    <h3>Cara Penggunaan:</h3>
+    <ol>
+      <li>Buka file ini di browser</li>
+      <li>Klik tombol untuk setiap ukuran icon</li>
+      <li>Icon PNG akan otomatis terdownload</li>
+      <li>Simpan file PNG ke folder <code>icons/</code></li>
+    </ol>
+  </div>
+  
+  <div class="converter">
+    <h2>Convert Icons</h2>
+    <p>Klik tombol dibawah untuk generate dan download icon PNG:</p>
+    
+    <button onclick="generateIcon(16)">Generate icon16.png</button>
+    <button onclick="generateIcon(48)">Generate icon48.png</button>
+    <button onclick="generateIcon(128)">Generate icon128.png</button>
+    
+    <div class="output">
+      <h3>Preview:</h3>
+      <div id="preview"></div>
+    </div>
+  </div>
+
+  <script>
+    function generateIcon(size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      
+      // Background
+      const cornerRadius = size * 0.15;
+      ctx.fillStyle = '#ee4d2d';
+      roundRect(ctx, 0, 0, size, size, cornerRadius);
+      ctx.fill();
+      
+      // Text "S"
+      ctx.fillStyle = 'white';
+      ctx.font = `bold ${size * 0.6}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('S', size / 2, size / 2 + size * 0.02);
+      
+      // Add to preview
+      const preview = document.getElementById('preview');
+      canvas.style.margin = '10px';
+      preview.innerHTML = '';
+      preview.appendChild(canvas);
+      
+      // Download
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `icon${size}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        alert(`icon${size}.png telah didownload! Simpan ke folder icons/`);
+      });
+    }
+    
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+  </script>
+</body>
+</html>
